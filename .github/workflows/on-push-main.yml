@@ -1,0 +1,61 @@
+# .github/workflows/on-push-main.yml
+name: demo
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    environment:
+      name: main
+      url: ${{ steps.backend.outputs.url }}
+    permissions: 
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.ROLE_ARN }}
+          role-session-name: ${{ github.actor }}
+      - uses: alonch/actions-aws-backend-setup@main
+        with: 
+          instance: sample
+      - uses: alonch/actions-aws-http-node@main
+        with:
+          name: actions-aws-http-node-sample
+          artifacts: src
+          timeout: 60
+          memory: 512
+          allow-public-access: true
+          routes: |
+            - entrypoint-file: index
+              entrypoint-function: handler
+              path: "/"
+              method: get
+
+            - entrypoint-file: plus
+              entrypoint-function: handler
+              path: "/plus/{z}"
+              method: post
+              parameters:
+                path:
+                - name: z
+                  type: number
+                query:
+                - name: x
+                  type: number
+                body: 
+                - name: y
+                  type: number
+              responses: 
+                - status-code: 200
+                  body:
+                  - name: total
+                    type: number
+          
+
+      
+
